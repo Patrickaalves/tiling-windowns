@@ -83,3 +83,18 @@ FocusDirection(dir) {
     if (bestHwnd)
         WinActivate("ahk_id " bestHwnd)
 }
+
+; ================= FECHAR JANELA EM FOCO (WIN + W) =================
+#w:: {
+    hwnd := WinExist("A")
+    if (!hwnd)
+        return
+
+    ; Proteção: não fechar a Área de Trabalho ou a Barra de Tarefas por engano
+    class := WinGetClass("ahk_id " hwnd)
+    if (class == "Progman" || class == "WorkerW" || class == "Shell_TrayWnd")
+        return
+
+    ; Fecha a janela ativa de forma limpa (equivalente ao Alt + F4)
+    WinClose("ahk_id " hwnd)
+}
