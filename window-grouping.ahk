@@ -113,8 +113,8 @@ CriarOverlayGrupo(hwnd, gId) {
     ov.SetFont("s7 bold cFFFFFF", "Segoe UI")
     ov.AddText("x0 y0 w32 h14 Center 0x200", "G" gId)
 
-    ; Posiciona no canto superior direito da janela
-    ov.Show("x" (x + w - 40) " y" (y + 32) " w32 h14 NoActivate")
+    ; Posiciona centralizado no topo da janela
+    ov.Show("x" (x + (w // 2) - 16) " y" (y + 2) " w32 h14 NoActivate")
 
     ; Quase transparente — apenas uma dica visual discreta
     WinSetTransparent(130, ov.Hwnd)
@@ -150,8 +150,8 @@ AtualizarOverlays() {
         }
 
         WinGetPos(&x, &y, &w, , "ahk_id " hwnd)
-        newX := x + w - 40   ; canto superior direito
-        newY := y + 32
+        newX := x + (w // 2) - 16  ; centro horizontal
+        newY := y + 2               ; topo da janela
 
         ; Badge foi destruído pelo sistema — recria
         if (!WinExist("ahk_id " info.gui.Hwnd)) {
