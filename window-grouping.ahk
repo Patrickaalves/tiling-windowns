@@ -1,5 +1,17 @@
 ; ================= AGRUPAMENTO DE JANELAS (ESTILO HYPRLAND) =================
 ; Módulo responsável por agrupar janelas no mesmo espaço retangular
+; IMPORTANTE: Bloqueia Win + G do Game Bar para usar apenas com agrupamento
+
+; Bloqueia completamente o Game Bar do Windows
+; Win + G agora ativa apenas o agrupamento de janelas
+#g::AgruparComVizinha()
+
+; Win + Alt + G: Remove a janela ativa do grupo
+#!g::DesagruparJanela()
+
+; Win + Shift + Left / Right: Alterna entre janelas do mesmo grupo
+#+Left::CiclarGrupo(-1)  ; Janela anterior do grupo
+#+Right::CiclarGrupo(1)  ; Próxima janela do grupo
 
 global gruposJanelas := Map()      ; Map de grupos: ID_Grupo -> Array de HWNDs
 global janelaParaGrupo := Map()    ; HWND -> ID_Grupo

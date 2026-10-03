@@ -48,11 +48,6 @@ global vdExe := A_ScriptDir "\VirtualDesktop11.exe"
 #-::AdjustWindowSplit(-200)         ; Win + -
 #NumpadSub::AdjustWindowSplit(-200) ; Win + Numpad -
 
-; ================= AGRUPAMENTO DE JANELAS (WIN + G) =================
-
-; Win + G: Agrupa a janela ativa com a vizinha mais próxima
-#g::AgruparComVizinha()
-
 ; Win + Alt + G: Remove a janela ativa do grupo
 #!g::DesagruparJanela()
 

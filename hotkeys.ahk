@@ -35,9 +35,6 @@
 ; Win + Alt + R: Recarregar script
 #!r::Reload()
 
-; Win + G: Desativa Game Bar (Win + G)
-#g::return
-
 ; ================= DESATIVAR MENU INICIAR NA TECLA WIN AVULSA =================
 ; Impede a abertura do Menu Iniciar ao teclar Win sozinho,
 ; mas mantém 100% funcionais todos os atalhos (Win + T, Win + Espaço, etc.):
