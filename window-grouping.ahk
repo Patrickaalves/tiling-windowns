@@ -76,7 +76,8 @@ AgruparComVizinha() {
 ; ================= CICLO E DESAGRUPAMENTO =================
 
 CiclarGrupo(direcao) {
-    global gruposJanelas, janelaParaGrupo
+    global gruposJanelas, janelaParaGrupo, ultimaPosGrupo
+
     hwndA := WinExist("A")
     if (!hwndA || !janelaParaGrupo.Has(hwndA))
         return
@@ -100,8 +101,22 @@ CiclarGrupo(direcao) {
     if (novoIdx < 1)    novoIdx := tam
 
     proximaHwnd := grupo[novoIdx]
-    if (WinExist("ahk_id " proximaHwnd))
-        WinActivate("ahk_id " proximaHwnd)
+    if (!WinExist("ahk_id " proximaHwnd))
+        return
+
+    ; Pausa o timer de detecção para não interferir na troca de foco
+    SetTimer(DetectarMovimentoGrupo, 0)
+
+    WinActivate("ahk_id " proximaHwnd)
+
+    ; Atualiza o cache de posição de todos os membros para evitar
+    ; que o timer interprete a mudança de Z-order como movimento manual
+    WinGetPos(&cx, &cy, &cw, &ch, "ahk_id " proximaHwnd)
+    for membro in grupo
+        ultimaPosGrupo[membro] := {x: cx, y: cy, w: cw, h: ch}
+
+    ; Reativa o timer após a troca de foco estabilizar
+    SetTimer(DetectarMovimentoGrupo, 250)
 }
 
 DesagruparJanela() {
