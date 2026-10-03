@@ -297,5 +297,17 @@ SwapWindows() {
     }
 }
 
+; ================= DESATIVAR MENU INICIAR NA TECLA WIN AVULSA =================
+; Impede a abertura do Menu Iniciar ao teclar Win sozinho,
+; mas mantém 100% funcionais todos os atalhos (Win + T, Win + Espaço, etc.):
+~LWin::Send("{Blind}{vkE8}")
+~RWin::Send("{Blind}{vkE8}")
+
+; Ao pressionar e soltar a tecla Win sozinha, abre o PowerToys Run:
+~LWin up:: {
+    if (A_PriorKey == "LWin")
+        Send("#!{Space}")
+}
+
 ; Inclui navegação espacial
 #Include "focus.ahk"
