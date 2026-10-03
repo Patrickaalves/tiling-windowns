@@ -1,35 +1,25 @@
-; ================= AGRUPAMENTO DE JANELAS (ESTILO HYPRLAND) =================
-; Módulo responsável por agrupar janelas no mesmo espaço retangular
-; IMPORTANTE: Bloqueia Win + G do Game Bar para usar apenas com agrupamento
+; ================= AGRUPAMENTO DE JANELAS (ESTILO OMARCHY/HYPRLAND) =================
+; Visual: borda colorida ao redor do grupo + barra de abas no topo com títulos
 
-; Bloqueia completamente o Game Bar do Windows
 #g::AgruparComVizinha()
-
-; Win + Alt + G: Cancela pendência ou remove janela do grupo
 #!g::DesagruparJanela()
-
-; Win + Shift + Left / Right: Alterna entre janelas do mesmo grupo
 #+Left::CiclarGrupo(-1)
 #+Right::CiclarGrupo(1)
 
 ; ================= ESTADO =================
 
-global gruposJanelas   := Map()   ; gId -> Array de HWNDs
-global janelaParaGrupo := Map()   ; hwnd -> gId
-global proximoGrupoId  := 1
-global hwndPendente    := 0       ; Janela aguardando 2º Win+G
-global grupoOverlays   := Map()   ; hwnd -> { gui: Gui, gId: int }
+global gruposJanelas    := Map()  ; gId -> Array de HWNDs
+global janelaParaGrupo  := Map()  ; hwnd -> gId
+global proximoGrupoId   := 1
+global hwndPendente     := 0
+global grupoVisuais     := Map()  ; gId -> { tabGui, borders[] }
+global ultimaPosGrupo   := Map()  ; hwnd -> {x,y,w,h} para detectar movimento manual
+global ultimaAtivaGrupo := 0      ; rastreia mudança de janela ativa para atualizar aba
 
-; Paleta de cores por grupo (azul, verde, vermelho, laranja, roxo, ciano)
-global grupoCores := ["2563EB", "16A34A", "DC2626", "D97706", "7C3AED", "0891B2"]
+; Paleta de cores por grupo
+global grupoCores := ["C53030", "276749", "2B6CB0", "C05621", "6B46C1", "086F83"]
 
-; Registra última posição conhecida de cada janela agrupada para detectar movimento manual
-global ultimaPosGrupo := Map()
-
-; Timer que mantém os badges posicionados sobre as janelas
-SetTimer(AtualizarOverlays, 150)
-
-; Timer que detecta movimento/resize manual dentro de um grupo e sincroniza os membros
+SetTimer(AtualizarVisuaisGrupos, 150)
 SetTimer(DetectarMovimentoGrupo, 250)
 
 ; ================= AGRUPAMENTO EM DOIS PASSOS =================
@@ -49,7 +39,7 @@ AgruparComVizinha() {
         return
     }
 
-    ; Cancela se pressionou Win+G na mesma janela
+    ; Cancela se Win+G na mesma janela
     if (hwndPendente == hwndA) {
         WinSetTransparent("Off", "ahk_id " hwndA)
         hwndPendente := 0
@@ -66,7 +56,6 @@ AgruparComVizinha() {
 
     WinGetPos(&bx, &by, &bw, &bh, "ahk_id " hwndB)
 
-    ; Define ou reutiliza ID do grupo
     gId := 0
     if (janelaParaGrupo.Has(hwndB))
         gId := janelaParaGrupo[hwndB]
@@ -83,97 +72,13 @@ AgruparComVizinha() {
         janelaParaGrupo[hwndA] := gId
     }
 
-    ; Cria badges visuais para todas as janelas do grupo
-    for h in gruposJanelas[gId]
-        CriarOverlayGrupo(h, gId)
-
     ; Empilha janela ativa sobre a de referência
     WinRestore("ahk_id " hwndA)
     WinMove(bx, by, bw, bh, "ahk_id " hwndA)
     WinActivate("ahk_id " hwndA)
-}
 
-; ================= BADGE VISUAL =================
-
-CriarOverlayGrupo(hwnd, gId) {
-    global grupoOverlays, grupoCores
-
-    ; Remove badge anterior se existir
-    RemoverOverlayGrupo(hwnd)
-
-    ; Cores suaves por grupo
-    cores := ["1D4ED8", "15803D", "B91C1C", "B45309", "6D28D9", "0E7490"]
-    cor := cores[Mod(gId - 1, cores.Length) + 1]
-
-    WinGetPos(&x, &y, &w, , "ahk_id " hwnd)
-
-    ; Badge pequeno no canto superior direito, quase transparente
-    ov := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x20")  ; E0x20 = click-through
-    ov.BackColor := cor
-    ov.SetFont("s7 bold cFFFFFF", "Segoe UI")
-    ov.AddText("x0 y0 w32 h14 Center 0x200", "G" gId)
-
-    ; Posiciona centralizado no topo da janela
-    ov.Show("x" (x + (w // 2) - 16) " y" (y + 2) " w32 h14 NoActivate")
-
-    ; Quase transparente — apenas uma dica visual discreta
-    WinSetTransparent(130, ov.Hwnd)
-
-    ; Pina o badge em todos os desktops virtuais para não sumir ao trocar área de trabalho
-    global vdExe
-    if (FileExist(vdExe))
-        try Run(vdExe ' /pwh:' ov.Hwnd,, "Hide")
-
-    grupoOverlays[hwnd] := { gui: ov, gId: gId, visible: true }
-}
-
-RemoverOverlayGrupo(hwnd) {
-    global grupoOverlays
-    if (grupoOverlays.Has(hwnd)) {
-        try grupoOverlays[hwnd].gui.Destroy()
-        grupoOverlays.Delete(hwnd)
-    }
-}
-
-; Timer: reposiciona badges e remove os de janelas já fechadas
-AtualizarOverlays() {
-    global grupoOverlays
-
-    for hwnd, info in grupoOverlays.Clone() {
-        ; Janela foi fechada — remove badge
-        if (!WinExist("ahk_id " hwnd)) {
-            try info.gui.Destroy()
-            grupoOverlays.Delete(hwnd)
-            continue
-        }
-
-        ; Janela minimizada — esconde badge
-        if (WinGetMinMax("ahk_id " hwnd) == -1) {
-            try info.gui.Hide()
-            info.visible := false
-            continue
-        }
-
-        WinGetPos(&x, &y, &w, , "ahk_id " hwnd)
-        newX := x + (w // 2) - 16  ; centro horizontal
-        newY := y + 2               ; topo da janela
-
-        ; Badge foi destruído pelo sistema — recria e repina
-        if (!WinExist("ahk_id " info.gui.Hwnd)) {
-            CriarOverlayGrupo(hwnd, info.gId)
-            continue
-        }
-
-        ; Estava oculto (minimizado antes) — mostra novamente
-        if (!info.visible) {
-            try info.gui.Show("x" newX " y" newY " NoActivate")
-            info.visible := true
-            continue
-        }
-
-        ; Apenas move sem chamar Show() — evita flicker e destruição pelo Windows
-        try WinMove(newX, newY,,,, "ahk_id " info.gui.Hwnd)
-    }
+    ; Cria visual do grupo
+    CriarVisualGrupo(gId)
 }
 
 ; ================= CICLO E DESAGRUPAMENTO =================
@@ -199,10 +104,8 @@ CiclarGrupo(direcao) {
     }
 
     novoIdx := idxAtual + direcao
-    if (novoIdx > tam)
-        novoIdx := 1
-    if (novoIdx < 1)
-        novoIdx := tam
+    if (novoIdx > tam)  novoIdx := 1
+    if (novoIdx < 1)    novoIdx := tam
 
     proximaHwnd := grupo[novoIdx]
     if (WinExist("ahk_id " proximaHwnd))
@@ -228,30 +131,192 @@ DesagruparJanela() {
     gId   := janelaParaGrupo[hwndA]
     grupo := gruposJanelas[gId]
 
-    ; Remove badge da janela que está saindo
-    RemoverOverlayGrupo(hwndA)
-
     novoArray := []
     for h in grupo {
         if (h != hwndA)
             novoArray.Push(h)
     }
 
-    if (novoArray.Length > 0)
+    janelaParaGrupo.Delete(hwndA)
+
+    if (novoArray.Length > 1) {
         gruposJanelas[gId] := novoArray
-    else {
-        ; Último membro saindo — remove grupo e badges restantes
-        for h in grupo
-            RemoverOverlayGrupo(h)
+        CriarVisualGrupo(gId)  ; recria sem a janela removida
+    } else if (novoArray.Length == 1) {
+        gruposJanelas[gId] := novoArray
+        janelaParaGrupo.Delete(novoArray[1])
+        RemoverVisualGrupo(gId)
+        gruposJanelas.Delete(gId)
+    } else {
+        RemoverVisualGrupo(gId)
         gruposJanelas.Delete(gId)
     }
-
-    janelaParaGrupo.Delete(hwndA)
 }
 
-; ================= DETECÇÃO DE MOVIMENTO MANUAL =================
-; Timer que detecta quando uma janela do grupo foi movida/redimensionada manualmente
-; e sincroniza todos os membros do grupo para as novas coordenadas
+; ================= VISUAL: BORDA + BARRA DE ABAS =================
+
+; Helper para capturar hwnd por valor no closure de clique de aba
+MakeTabHandler(targetHwnd) {
+    return (*) => WinActivate("ahk_id " targetHwnd)
+}
+
+CriarVisualGrupo(gId) {
+    global grupoVisuais, gruposJanelas, grupoCores, vdExe
+
+    RemoverVisualGrupo(gId)
+
+    grupo := gruposJanelas[gId]
+    if (grupo.Length == 0)
+        return
+
+    ; Referência de posição: primeiro membro visível
+    refHwnd := 0
+    for hwnd in grupo {
+        if (WinExist("ahk_id " hwnd) && WinGetMinMax("ahk_id " hwnd) != -1) {
+            refHwnd := hwnd
+            break
+        }
+    }
+    if (!refHwnd)
+        return
+
+    WinGetPos(&wx, &wy, &ww, &wh, "ahk_id " refHwnd)
+
+    cor      := grupoCores[Mod(gId - 1, grupoCores.Length) + 1]
+    tabH     := 20   ; altura da barra de abas
+    bordW    := 2    ; espessura da borda
+    activeHwnd := WinExist("A")
+
+    ; ---- BARRA DE ABAS ----
+    tabGui := Gui("+AlwaysOnTop -Caption +ToolWindow")
+    tabGui.BackColor := "0D0D1A"
+    tabGui.SetFont("s7 cCCCCCC", "Segoe UI")
+
+    tabCount := grupo.Length
+    eachW    := Floor(ww / tabCount)
+
+    for i, memberHwnd in grupo {
+        title := ""
+        try title := WinGetTitle("ahk_id " memberHwnd)
+        if (StrLen(title) > 25)
+            title := SubStr(title, 1, 23) "…"
+
+        isActive := (memberHwnd == activeHwnd)
+        tx       := (i - 1) * eachW
+        tw       := (i == tabCount) ? (ww - tx) : eachW
+        bgColor  := isActive ? cor : "1A1A2E"
+
+        ctrl := tabGui.AddText(
+            "x" tx " y0 w" tw " h" tabH " Center 0x200 Background" bgColor,
+            title
+        )
+        ctrl.OnEvent("Click", MakeTabHandler(memberHwnd))
+
+        ; Separador entre abas
+        if (i < tabCount)
+            tabGui.AddText("x" (tx + tw - 1) " y2 w1 h" (tabH - 4) " Background303050", "")
+    }
+
+    tabGui.Show("x" wx " y" wy " w" ww " h" tabH " NoActivate")
+    WinSetTransparent(220, tabGui.Hwnd)
+    if (FileExist(vdExe))
+        try Run(vdExe ' /pwh:' tabGui.Hwnd,, "Hide")
+
+    ; ---- BORDAS (click-through) ----
+    borders := []
+    positions := [
+        {bx: wx,              by: wy,               bw: ww,    bh: bordW},          ; topo
+        {bx: wx,              by: wy + wh - bordW,  bw: ww,    bh: bordW},          ; baixo
+        {bx: wx,              by: wy,               bw: bordW, bh: wh},             ; esquerda
+        {bx: wx + ww - bordW, by: wy,               bw: bordW, bh: wh}              ; direita
+    ]
+
+    for pos in positions {
+        b := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x20")
+        b.BackColor := cor
+        b.Show("x" pos.bx " y" pos.by " w" pos.bw " h" pos.bh " NoActivate")
+        WinSetTransparent(180, b.Hwnd)
+        if (FileExist(vdExe))
+            try Run(vdExe ' /pwh:' b.Hwnd,, "Hide")
+        borders.Push(b)
+    }
+
+    grupoVisuais[gId] := { tabGui: tabGui, borders: borders }
+}
+
+RemoverVisualGrupo(gId) {
+    global grupoVisuais
+    if (!grupoVisuais.Has(gId))
+        return
+    v := grupoVisuais[gId]
+    try v.tabGui.Destroy()
+    for b in v.borders
+        try b.Destroy()
+    grupoVisuais.Delete(gId)
+}
+
+; ================= TIMER: REPOSICIONAR VISUAIS =================
+
+AtualizarVisuaisGrupos() {
+    global grupoVisuais, gruposJanelas, janelaParaGrupo, ultimaAtivaGrupo
+
+    ; Recria visual se a janela ativa mudou dentro de um grupo (atualiza aba destacada)
+    activeHwnd := WinExist("A")
+    if (activeHwnd != ultimaAtivaGrupo) {
+        ultimaAtivaGrupo := activeHwnd
+        if (janelaParaGrupo.Has(activeHwnd))
+            CriarVisualGrupo(janelaParaGrupo[activeHwnd])
+    }
+
+    tabH  := 20
+    bordW := 2
+
+    for gId, v in grupoVisuais.Clone() {
+        if (!gruposJanelas.Has(gId)) {
+            RemoverVisualGrupo(gId)
+            continue
+        }
+
+        grupo := gruposJanelas[gId]
+
+        ; Encontra membro visível para referência
+        refHwnd := 0
+        allMin  := true
+        for hwnd in grupo {
+            if (!WinExist("ahk_id " hwnd))
+                continue
+            if (WinGetMinMax("ahk_id " hwnd) != -1) {
+                refHwnd := hwnd
+                allMin  := false
+                break
+            }
+        }
+
+        if (allMin || !refHwnd) {
+            try v.tabGui.Hide()
+            for b in v.borders
+                try b.Hide()
+            continue
+        }
+
+        WinGetPos(&wx, &wy, &ww, &wh, "ahk_id " refHwnd)
+
+        ; Reposiciona aba
+        try WinMove(wx, wy, ww, tabH, "ahk_id " v.tabGui.Hwnd)
+
+        ; Reposiciona bordas
+        positions := [
+            {bx: wx,              by: wy,               bw: ww,    bh: bordW},
+            {bx: wx,              by: wy + wh - bordW,  bw: ww,    bh: bordW},
+            {bx: wx,              by: wy,               bw: bordW, bh: wh},
+            {bx: wx + ww - bordW, by: wy,               bw: bordW, bh: wh}
+        ]
+        for i, pos in positions
+            try WinMove(pos.bx, pos.by, pos.bw, pos.bh, "ahk_id " v.borders[i].Hwnd)
+    }
+}
+
+; ================= TIMER: DETECTAR MOVIMENTO MANUAL =================
 
 DetectarMovimentoGrupo() {
     global gruposJanelas, janelaParaGrupo, ultimaPosGrupo
@@ -268,7 +333,6 @@ DetectarMovimentoGrupo() {
 
             WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
 
-            ; Primeira vez vendo esta janela — registra posição inicial
             if (!ultimaPosGrupo.Has(hwnd)) {
                 ultimaPosGrupo[hwnd] := {x: x, y: y, w: w, h: h}
                 continue
@@ -276,13 +340,11 @@ DetectarMovimentoGrupo() {
 
             pos := ultimaPosGrupo[hwnd]
 
-            ; Detectou mudança — esta janela foi movida ou redimensionada
             if (x != pos.x || y != pos.y || w != pos.w || h != pos.h) {
-                ; Atualiza registro de todos os membros primeiro
+                ; Atualiza todos antes de mover para evitar ping-pong com SincronizarGrupo
                 for membro in grupo
                     ultimaPosGrupo[membro] := {x: x, y: y, w: w, h: h}
 
-                ; Sincroniza todos os outros membros para as novas coordenadas
                 for membro in grupo {
                     if (membro != hwnd && WinExist("ahk_id " membro)) {
                         try {
@@ -291,7 +353,7 @@ DetectarMovimentoGrupo() {
                         }
                     }
                 }
-                break  ; Processa um grupo por ciclo para evitar conflitos
+                break
             }
         }
     }
