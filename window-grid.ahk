@@ -56,7 +56,7 @@ GridWindowTiling() {
     }
 
     hudPad := 16
-    gap := 10
+    gap := 12
 
     hudX := WL + (workW - hudW) / 2
     hudY := WT + (workH - hudH) / 2
