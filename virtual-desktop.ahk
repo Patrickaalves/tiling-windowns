@@ -64,16 +64,15 @@ NavigateDesktopRight() {
     Send("^#{Right}")
 }
 
-; Recria e repina todos os badges de grupos para garantir visibilidade após troca de desktop
+; Repina todos os visuais de grupos para garantir visibilidade após troca de desktop
 RecriarBadgesGrupos() {
-    global gruposJanelas, grupoOverlays, vdExe
+    global grupoVisuais, vdExe
     if (!FileExist(vdExe))
         return
-    for gId, grupo in gruposJanelas {
-        for hwnd in grupo {
-            if (grupoOverlays.Has(hwnd))
-                try Run(vdExe ' /pwh:' grupoOverlays[hwnd].gui.Hwnd,, "Hide")
-        }
+    for gId, v in grupoVisuais {
+        try Run(vdExe ' /pwh:' v.tabGui.Hwnd,, "Hide")
+        for b in v.borders
+            try Run(vdExe ' /pwh:' b.Hwnd,, "Hide")
     }
 }
 
