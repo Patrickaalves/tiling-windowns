@@ -84,17 +84,28 @@ FocusDirection(dir) {
         WinActivate("ahk_id " bestHwnd)
 }
 
+; ================= FORÇAR EXECUÇÃO COMO ADMINISTRADOR =================
+; Coloque isto no topo do seu script para conseguir fechar/interagir
+; com janelas elevadas (como o Terminal aberto como Admin):
+if (!A_IsAdmin) {
+    try {
+        Run('*RunAs "' A_AhkPath '" "' A_ScriptFullPath '"')
+        ExitApp()
+    }
+}
+
 ; ================= FECHAR JANELA EM FOCO (WIN + W) =================
 #w:: {
     hwnd := WinExist("A")
     if (!hwnd)
         return
 
-    ; Proteção: não fechar a Área de Trabalho ou a Barra de Tarefas por engano
+    ; Proteção: não fechar a Área de Trabalho ou a Barra de Tarefas
     class := WinGetClass("ahk_id " hwnd)
     if (class == "Progman" || class == "WorkerW" || class == "Shell_TrayWnd")
         return
 
-    ; Fecha a janela ativa de forma limpa (equivalente ao Alt + F4)
-    WinClose("ahk_id " hwnd)
+    ; Envia Alt + F4 diretamente à janela em foco
+    ; Fecha o Windows Terminal, VS Code, navegadores e qualquer aplicação UWP/Win32
+    Send("!{F4}")
 }

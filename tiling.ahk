@@ -173,11 +173,6 @@
 ; No final do arquivo tiling.ahk:
 #Include "focus.ahk"
 
-; ================= LANÇADOR RÁPIDO (WIN + ESPAÇO) =================
-; Intercepta Win + Espaço, suprime a troca de idioma do Windows 
-; e aciona instantaneamente o atalho do lançador (Alt + Espaço)
-#Space::Send("!{Space}")
-
 ; ================= ABRIR TERMINAL (WIN + ENTER) =================
 #Enter::Run("wt")
 
