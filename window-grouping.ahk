@@ -18,15 +18,23 @@ global janelaParaGrupo := Map()    ; HWND -> ID_Grupo
 global proximoGrupoId := 1
 
 ; Cria ou adiciona a janela ativa a um grupo com a vizinha
-; Modo: PERMISSIVO - qualquer janela pode ser agrupada
-; Se você quiser restringir, edite a função VerificaAgrupavelApp() em config.ahk
+; Modo: Controlado por config.ahk (whitelist/blacklist/permissivo)
 AgruparComVizinha() {
-    global gruposJanelas, janelaParaGrupo, proximoGrupoId
+    global gruposJanelas, janelaParaGrupo, proximoGrupoId, groupingMode, groupingApps
     SetWinDelay(-1)
 
     hwndA := WinExist("A")
     if (!hwndA)
         return
+
+    ; Obtém o título e classe da janela ativa
+    titleA := WinGetTitle("ahk_id " hwndA)
+    classA := WinGetClass("ahk_id " hwndA)
+
+    ; Verifica se a janela pode ser agrupada baseado na configuração
+    if (!VerificaAgrupavelApp(titleA, classA, groupingMode, groupingApps)) {
+        return
+    }
 
     ; Identifica a janela vizinha mais próxima no mesmo monitor
     WinGetPos(&ax, &ay, &aw, &ah, "ahk_id " hwndA)
