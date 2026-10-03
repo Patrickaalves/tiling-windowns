@@ -3,7 +3,8 @@
 
 ; Sincroniza todas as janelas do grupo da janela informada para as coordenadas dadas
 SincronizarGrupo(hwnd, x, y, w, h) {
-    global gruposJanelas, janelaParaGrupo    if (!janelaParaGrupo.Has(hwnd))
+    global gruposJanelas, janelaParaGrupo
+    if (!janelaParaGrupo.Has(hwnd))
         return
     gId := janelaParaGrupo[hwnd]
     for h in gruposJanelas[gId] {
