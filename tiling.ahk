@@ -183,3 +183,77 @@
 
 ; ================= ABRIR TERMINAL (WIN + ALT + ENTER) =================
 #!Enter::Run("*RunAs wt")
+
+; ================= TROCAR POSIÇÃO DE DUAS JANELAS (WIN + ALT + SETAS LATERAIS) =================
+#!Left::SwapWindows()
+#!Right::SwapWindows()
+
+SwapWindows() {
+    hwndA := WinExist("A")
+    if (!hwndA)
+        return
+
+    ; Posição e dimensões da janela ativa
+    WinGetPos(&ax, &ay, &aw, &ah, "ahk_id " hwndA)
+    acx := ax + (aw / 2)
+    acy := ay + (ah / 2)
+
+    ; Identifica o monitor onde a janela ativa está localizada
+    monCount := MonitorGetCount()
+    currentMon := 1
+    loop monCount {
+        MonitorGet(A_Index, &mL, &mT, &mR, &mB)
+        if (acx >= mL && acx <= mR && acy >= mT && acy <= mB) {
+            currentMon := A_Index
+            break
+        }
+    }
+    MonitorGetWorkArea(currentMon, &WL, &WT, &WR, &WB)
+
+    hwndB := 0
+    bx := 0, by := 0, bw := 0, bh := 0
+
+    ; Procura a outra janela visível e aberta no mesmo monitor
+    for hwnd in WinGetList() {
+        if (hwnd == hwndA)
+            continue
+
+        title := WinGetTitle("ahk_id " hwnd)
+        if (title == "" || title == "Program Manager" || title == "Settings")
+            continue
+
+        if (WinGetMinMax("ahk_id " hwnd) == -1) ; Ignora janelas minimizadas
+            continue
+
+        exStyle := WinGetExStyle("ahk_id " hwnd)
+        if (exStyle & 0x00000080) ; Ignora ToolWindows/overlays
+            continue
+
+        WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
+        if (w < 200 || h < 200) ; Ignora notificações e popups pequenos
+            continue
+
+        ; Centro da janela candidata
+        cx := x + (w / 2)
+        cy := y + (h / 2)
+
+        ; Valida se está na área útil deste monitor
+        if (cx >= WL && cx <= WR && cy >= WT && cy <= WB) {
+            hwndB := hwnd
+            bx := x, by := y, bw := w, bh := h
+            break
+        }
+    }
+
+    ; Inverte as coordenadas e dimensões entre as duas janelas
+    if (hwndB) {
+        WinRestore("ahk_id " hwndA)
+        WinRestore("ahk_id " hwndB)
+
+        WinMove(bx, by, bw, bh, "ahk_id " hwndA)
+        WinMove(ax, ay, aw, ah, "ahk_id " hwndB)
+
+        ; Mantém o foco no aplicativo ativo
+        WinActivate("ahk_id " hwndA)
+    }
+}
