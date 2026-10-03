@@ -56,6 +56,7 @@ Cada módulo deve ser **coeso** e realizar uma única função bem definida:
 | **virtual-desktop.ahk** | Gerenciamento de desktops virtuais |
 | **window-swap.ahk** | Troca de posição entre janelas |
 | **window-resize.ahk** | Redimensionamento dinâmico |
+| **window-grouping.ahk** | Agrupamento de janelas (estilo Hyprland) |
 | **hotkeys.ahk** | Atalhos gerais não categorizados |
 
 ### Globais Disponíveis

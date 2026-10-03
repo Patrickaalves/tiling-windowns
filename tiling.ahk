@@ -19,6 +19,7 @@ global vdExe := A_ScriptDir "\VirtualDesktop11.exe"
 #Include "virtual-desktop.ahk"
 #Include "window-swap.ahk"
 #Include "window-resize.ahk"
+#Include "window-grouping.ahk"
 #Include "hotkeys.ahk"
 
 ; ================= ATALHOS PRINCIPAIS =================
@@ -46,3 +47,15 @@ global vdExe := A_ScriptDir "\VirtualDesktop11.exe"
 
 #-::AdjustWindowSplit(-200)         ; Win + -
 #NumpadSub::AdjustWindowSplit(-200) ; Win + Numpad -
+
+; ================= AGRUPAMENTO DE JANELAS (WIN + G) =================
+
+; Win + G: Agrupa a janela ativa com a vizinha mais próxima
+#g::AgruparComVizinha()
+
+; Win + Alt + G: Remove a janela ativa do grupo
+#!g::DesagruparJanela()
+
+; Win + Shift + Left / Right: Alterna entre janelas do mesmo grupo
+#+Left::CiclarGrupo(-1)  ; Janela anterior do grupo
+#+Right::CiclarGrupo(1)  ; Próxima janela do grupo
