@@ -106,7 +106,7 @@ CriarOverlayGrupo(hwnd, gId) {
     ov.Show("x" (x + 8) " y" (y + 38) " w28 h28 NoActivate")
     WinSetTransparent(230, ov.Hwnd)
 
-    grupoOverlays[hwnd] := { gui: ov, gId: gId }
+    grupoOverlays[hwnd] := { gui: ov, gId: gId, visible: true }
 }
 
 RemoverOverlayGrupo(hwnd) {
@@ -132,12 +132,29 @@ AtualizarOverlays() {
         ; Janela minimizada — esconde badge
         if (WinGetMinMax("ahk_id " hwnd) == -1) {
             info.gui.Hide()
+            info.visible := false
             continue
         }
 
-        ; Reposiciona badge no canto superior esquerdo da janela
         WinGetPos(&x, &y,, , "ahk_id " hwnd)
-        info.gui.Show("x" (x + 8) " y" (y + 38) " NoActivate")
+        newX := x + 8
+        newY := y + 38
+
+        ; Badge foi destruído pelo sistema — recria
+        if (!WinExist("ahk_id " info.gui.Hwnd)) {
+            CriarOverlayGrupo(hwnd, info.gId)
+            continue
+        }
+
+        ; Estava oculto (minimizado antes) — mostra novamente
+        if (!info.visible) {
+            info.gui.Show("x" newX " y" newY " NoActivate")
+            info.visible := true
+            continue
+        }
+
+        ; Apenas move sem chamar Show() — evita flicker e destruição pelo Windows
+        WinMove(newX, newY,,,, "ahk_id " info.gui.Hwnd)
     }
 }
 
