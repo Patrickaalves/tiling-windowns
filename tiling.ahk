@@ -177,3 +177,6 @@
 ; Intercepta Win + Espaço, suprime a troca de idioma do Windows 
 ; e aciona instantaneamente o atalho do lançador (Alt + Espaço)
 #Space::Send("!{Space}")
+
+; ================= ABRIR TERMINAL (WIN + ENTER) =================
+#Enter::Run("*RunAs wt")
