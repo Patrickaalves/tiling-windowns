@@ -24,8 +24,8 @@ GridWindowTiling() {
     workW := WR - WL
     workH := WB - WT
 
-    marginOuter := 12
-    marginInner := 14
+    marginOuter := 6
+    marginInner := 6
     isVertical := (workH > workW)
 
     overlay := Gui("+AlwaysOnTop -Caption +ToolWindow")

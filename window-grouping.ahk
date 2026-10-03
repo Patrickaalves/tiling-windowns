@@ -23,8 +23,14 @@ global grupoOverlays   := Map()   ; hwnd -> { gui: Gui, gId: int }
 ; Paleta de cores por grupo (azul, verde, vermelho, laranja, roxo, ciano)
 global grupoCores := ["2563EB", "16A34A", "DC2626", "D97706", "7C3AED", "0891B2"]
 
+; Registra última posição conhecida de cada janela agrupada para detectar movimento manual
+global ultimaPosGrupo := Map()
+
 ; Timer que mantém os badges posicionados sobre as janelas
 SetTimer(AtualizarOverlays, 150)
+
+; Timer que detecta movimento/resize manual dentro de um grupo e sincroniza os membros
+SetTimer(DetectarMovimentoGrupo, 250)
 
 ; ================= AGRUPAMENTO EM DOIS PASSOS =================
 
@@ -229,4 +235,52 @@ DesagruparJanela() {
     }
 
     janelaParaGrupo.Delete(hwndA)
+}
+
+; ================= DETECÇÃO DE MOVIMENTO MANUAL =================
+; Timer que detecta quando uma janela do grupo foi movida/redimensionada manualmente
+; e sincroniza todos os membros do grupo para as novas coordenadas
+
+DetectarMovimentoGrupo() {
+    global gruposJanelas, janelaParaGrupo, ultimaPosGrupo
+
+    for gId, grupo in gruposJanelas {
+        if (grupo.Length <= 1)
+            continue
+
+        for hwnd in grupo {
+            if (!WinExist("ahk_id " hwnd))
+                continue
+            if (WinGetMinMax("ahk_id " hwnd) == -1)
+                continue
+
+            WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
+
+            ; Primeira vez vendo esta janela — registra posição inicial
+            if (!ultimaPosGrupo.Has(hwnd)) {
+                ultimaPosGrupo[hwnd] := {x: x, y: y, w: w, h: h}
+                continue
+            }
+
+            pos := ultimaPosGrupo[hwnd]
+
+            ; Detectou mudança — esta janela foi movida ou redimensionada
+            if (x != pos.x || y != pos.y || w != pos.w || h != pos.h) {
+                ; Atualiza registro de todos os membros primeiro
+                for membro in grupo
+                    ultimaPosGrupo[membro] := {x: x, y: y, w: w, h: h}
+
+                ; Sincroniza todos os outros membros para as novas coordenadas
+                for membro in grupo {
+                    if (membro != hwnd && WinExist("ahk_id " membro)) {
+                        try {
+                            WinRestore("ahk_id " membro)
+                            WinMove(x, y, w, h, "ahk_id " membro)
+                        }
+                    }
+                }
+                break  ; Processa um grupo por ciclo para evitar conflitos
+            }
+        }
+    }
 }
