@@ -53,27 +53,13 @@ FixarJanelasMonitorVertical() {
 ; Navega para o desktop virtual à esquerda preservando configuração do monitor vertical
 NavigateDesktopLeft() {
     FixarJanelasMonitorVertical()
-    RecriarBadgesGrupos()
     Send("^#{Left}")
 }
 
 ; Navega para o desktop virtual à direita preservando configuração do monitor vertical
 NavigateDesktopRight() {
     FixarJanelasMonitorVertical()
-    RecriarBadgesGrupos()
     Send("^#{Right}")
-}
-
-; Repina todos os visuais de grupos para garantir visibilidade após troca de desktop
-RecriarBadgesGrupos() {
-    global grupoVisuais, vdExe
-    if (!FileExist(vdExe))
-        return
-    for gId, v in grupoVisuais {
-        try Run(vdExe ' /pwh:' v.tabGui.Hwnd,, "Hide")
-        for b in v.borders
-            try Run(vdExe ' /pwh:' b.Hwnd,, "Hide")
-    }
 }
 
 ; Fixa manualmente a janela ativa em todos os desktops virtuais
