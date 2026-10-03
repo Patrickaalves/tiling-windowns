@@ -18,6 +18,8 @@ global janelaParaGrupo := Map()    ; HWND -> ID_Grupo
 global proximoGrupoId := 1
 
 ; Cria ou adiciona a janela ativa a um grupo com a vizinha
+; Modo: PERMISSIVO - qualquer janela pode ser agrupada
+; Se você quiser restringir, edite a função VerificaAgrupavelApp() em config.ahk
 AgruparComVizinha() {
     global gruposJanelas, janelaParaGrupo, proximoGrupoId
     SetWinDelay(-1)
@@ -86,7 +88,7 @@ AgruparComVizinha() {
         janelaParaGrupo[bestHwnd] := gId
     }
 
-    ; Adiciona a janela atual ao grupo se ainda não estiver nele
+    ; Adiciona a janela atual ao grupo se ainda não estiver nela
     if (!janelaParaGrupo.Has(hwndA)) {
         gruposJanelas[gId].Push(hwndA)
         janelaParaGrupo[hwndA] := gId

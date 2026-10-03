@@ -12,6 +12,9 @@ if (!A_IsAdmin) {
 ; Caminho do utilitário de persistência de desktops virtuais
 global vdExe := A_ScriptDir "\VirtualDesktop11.exe"
 
+; ================= INCLUSÃO DE CONFIGURAÇÃO =================
+#Include "config.ahk"
+
 ; ================= INCLUSÃO DE MÓDULOS =================
 #Include "utils.ahk"
 #Include "focus.ahk"
