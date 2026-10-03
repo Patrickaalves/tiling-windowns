@@ -131,7 +131,7 @@ AtualizarOverlays() {
 
         ; Janela minimizada — esconde badge
         if (WinGetMinMax("ahk_id " hwnd) == -1) {
-            info.gui.Hide()
+            try info.gui.Hide()
             info.visible := false
             continue
         }
@@ -148,13 +148,13 @@ AtualizarOverlays() {
 
         ; Estava oculto (minimizado antes) — mostra novamente
         if (!info.visible) {
-            info.gui.Show("x" newX " y" newY " NoActivate")
+            try info.gui.Show("x" newX " y" newY " NoActivate")
             info.visible := true
             continue
         }
 
         ; Apenas move sem chamar Show() — evita flicker e destruição pelo Windows
-        WinMove(newX, newY,,,, "ahk_id " info.gui.Hwnd)
+        try WinMove(newX, newY,,,, "ahk_id " info.gui.Hwnd)
     }
 }
 
