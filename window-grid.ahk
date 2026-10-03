@@ -24,7 +24,7 @@ GridWindowTiling() {
     workW := WR - WL
     workH := WB - WT
 
-    marginOuter := 10
+    marginOuter := 12
     marginInner := 14
     isVertical := (workH > workW)
 

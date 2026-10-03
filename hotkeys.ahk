@@ -1,6 +1,17 @@
 ; ================= ATALHOS GERAIS DO SISTEMA =================
 ; Módulo responsável por atalhos gerais que não se encaixam em outras categorias
 
+; Win + Q: Minimiza a janela em foco
+#q:: {
+    hwnd := WinExist("A")
+    if (!hwnd)
+        return
+    class := WinGetClass("ahk_id " hwnd)
+    if (class == "Progman" || class == "WorkerW" || class == "Shell_TrayWnd")
+        return
+    WinMinimize("ahk_id " hwnd)
+}
+
 ; Win + W: Fecha a janela em foco
 #w:: {
     hwnd := WinExist("A")
