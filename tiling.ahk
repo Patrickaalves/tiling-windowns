@@ -1,13 +1,23 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-; Atalho: Win + T
+; ================= EXECUÇÃO ELEVADA (ADMINISTRADOR) =================
+if (!A_IsAdmin) {
+    try {
+        Run('*RunAs "' A_AhkPath '" "' A_ScriptFullPath '"')
+        ExitApp()
+    }
+}
+
+; Caminho do utilitário de persistência
+global vdExe := A_ScriptDir "\VirtualDesktop11.exe"
+
+; ================= GERENCIAMENTO DE JANELAS EM GRADE (WIN + T) =================
 #t:: {
     hwndAlvo := WinExist("A")
     if (!hwndAlvo)
         return
 
-    ; Identifica o monitor da janela ativa
     monCount := MonitorGetCount()
     currentMon := 1
     WinGetPos(&wx, &wy, &ww, &wh, "ahk_id " hwndAlvo)
@@ -26,11 +36,8 @@
     workW := WR - WL
     workH := WB - WT
 
-    ; Espaçamentos
     marginOuter := 16
     marginInner := 12
-
-    ; Detecta orientação do monitor
     isVertical := (workH > workW)
 
     overlay := Gui("+AlwaysOnTop -Caption +ToolWindow")
@@ -38,60 +45,51 @@
     overlay.SetFont("s22 bold cE5E7EB", "Segoe UI")
     caixas := Map()
 
-    ; ================= MONTAGEM DO HUD POR MONITOR =================
     if (isVertical) {
-        ; Layout Vertical: apenas 2 blocos (Cima e Baixo)
-        hudW := Round(Min(workW * 0.85, 320))
-        hudH := 360
-        hudPad := 16
-        gap := 12
+        nCols := 2
+        nRows := 2
+        hudW := Round(Min(workW * 0.85, 340))
+        hudH := hudW
 
-        hudX := WL + (workW - hudW) / 2
-        hudY := WT + (workH - hudH) / 2
-
-        cardW := hudW - (2 * hudPad)
-        cardH := (hudH - (2 * hudPad) - gap) / 2
-
-        ; Desenha Q (Cima) e S (Baixo)
-        caixas["q"] := overlay.AddText("x" hudPad " y" hudPad " w" cardW " h" Round(cardH) " Center 0x200 Background1F2937", "Q")
-        caixas["s"] := overlay.AddText("x" hudPad " y" Round(hudPad + cardH + gap) " w" cardW " h" Round(cardH) " Center 0x200 Background1F2937", "S")
-
-        ; Mapeamento de teclas válidas no monitor vertical (com W e A como sinônimos)
         zonasPermitidas := Map(
-            "q", {row: 1, uiKey: "q"},
-            "w", {row: 1, uiKey: "q"},
-            "s", {row: 2, uiKey: "s"},
-            "a", {row: 2, uiKey: "s"}
+            "q", {row: 1, col: 1}, "w", {row: 1, col: 2},
+            "a", {row: 2, col: 1}, "s", {row: 2, col: 2}
         )
     } else {
-        ; Layout Horizontal / Ultrawide: grade 3x2 completa
+        nCols := 3
+        nRows := 2
         hudW := 600
         hudH := 340
-        hudPad := 16
-        gap := 10
-
-        hudX := WL + (workW - hudW) / 2
-        hudY := WT + (workH - hudH) / 2
-
-        cardW := (hudW - (2 * hudPad) - (2 * gap)) / 3
-        cardH := (hudH - (2 * hudPad) - (1 * gap)) / 2
 
         zonasPermitidas := Map(
-            "q", {row: 1, col: 1, uiKey: "q"}, "w", {row: 1, col: 2, uiKey: "w"}, "e", {row: 1, col: 3, uiKey: "e"},
-            "a", {row: 2, col: 1, uiKey: "a"}, "s", {row: 2, col: 2, uiKey: "s"}, "d", {row: 2, col: 3, uiKey: "d"}
+            "q", {row: 1, col: 1}, "w", {row: 1, col: 2}, "e", {row: 1, col: 3},
+            "a", {row: 2, col: 1}, "s", {row: 2, col: 2}, "d", {row: 2, col: 3}
         )
+    }
 
-        for tecla, coord in zonasPermitidas {
-            bx := hudPad + ((coord.col - 1) * (cardW + gap))
-            by := hudPad + ((coord.row - 1) * (cardH + gap))
-            caixas[tecla] := overlay.AddText("x" Round(bx) " y" Round(by) " w" Round(cardW) " h" Round(cardH) " Center 0x200 Background1F2937", StrUpper(tecla))
-        }
+    hudPad := 16
+    gap := 10
+
+    hudX := WL + (workW - hudW) / 2
+    hudY := WT + (workH - hudH) / 2
+
+    cardW := (hudW - (2 * hudPad) - ((nCols - 1) * gap)) / nCols
+    cardH := (hudH - (2 * hudPad) - ((nRows - 1) * gap)) / nRows
+
+    for tecla, coord in zonasPermitidas {
+        bx := hudPad + ((coord.col - 1) * (cardW + gap))
+        by := hudPad + ((coord.row - 1) * (cardH + gap))
+        caixas[tecla] := overlay.AddText(
+            "x" Round(bx) " y" Round(by)
+            " w" Round(cardW) " h" Round(cardH)
+            " Center 0x200 Background1F2937",
+            StrUpper(tecla)
+        )
     }
 
     overlay.Show("x" Round(hudX) " y" Round(hudY) " w" hudW " h" hudH " NoActivate")
     WinSetTransparent(235, overlay.Hwnd)
 
-    ; Captura 1ª tecla
     ih1 := InputHook("L1 T2")
     ih1.Start()
     ih1.Wait()
@@ -102,10 +100,8 @@
         return
     }
 
-    ; Destaca a caixa correspondente no HUD
-    try caixas[zonasPermitidas[t1].uiKey].Opt("Background2563EB")
+    try caixas[t1].Opt("Background2563EB")
 
-    ; Captura 2ª tecla opcional
     ih2 := InputHook("L1 T0.8")
     ih2.Start()
     ih2.Wait()
@@ -116,67 +112,125 @@
 
     overlay.Destroy()
 
-    ; ================= POSICIONAMENTO DA JANELA =================
-    if (isVertical) {
-        ; --- REGRAS DO MONITOR VERTICAL (2 ZONAS) ---
-        halfH := (workH - (2 * marginOuter) - marginInner) / 2
-        fullW := workW - (2 * marginOuter)
+    colW := (workW - (2 * marginOuter) - ((nCols - 1) * marginInner)) / nCols
+    rowH := (workH - (2 * marginOuter) - ((nRows - 1) * marginInner)) / nRows
 
-        r1 := zonasPermitidas[t1].row
-        r2 := zonasPermitidas[t2].row
+    z1 := zonasPermitidas[t1]
+    z2 := zonasPermitidas[t2]
 
-        ; Se digitou uma de cima e uma de baixo (ex: Q + S), TELA CHEIA
-        if (r1 != r2) {
-            finalX := WL + marginOuter
-            finalY := WT + marginOuter
-            finalW := fullW
-            finalH := workH - (2 * marginOuter)
-        } else if (r1 == 1) {
-            ; Metade de Cima (Q)
-            finalX := WL + marginOuter
-            finalY := WT + marginOuter
-            finalW := fullW
-            finalH := Round(halfH)
-        } else {
-            ; Metade de Baixo (S)
-            finalX := WL + marginOuter
-            finalY := WT + marginOuter + Round(halfH) + marginInner
-            finalW := fullW
-            finalH := Round(halfH)
-        }
-    } else {
-        ; --- REGRAS DO MONITOR ULTRAWIDE / HORIZONTAL (3x2) ---
-        colW := (workW - (2 * marginOuter) - (2 * marginInner)) / 3
-        rowH := (workH - (2 * marginOuter) - (1 * marginInner)) / 2
+    minCol := Min(z1.col, z2.col)
+    maxCol := Max(z1.col, z2.col)
+    minRow := Min(z1.row, z2.row)
+    maxRow := Max(z1.row, z2.row)
 
-        z1 := zonasPermitidas[t1]
-        z2 := zonasPermitidas[t2]
+    spanCols := (maxCol - minCol) + 1
+    spanRows := (maxRow - minRow) + 1
 
-        minCol := Min(z1.col, z2.col)
-        maxCol := Max(z1.col, z2.col)
-        minRow := Min(z1.row, z2.row)
-        maxRow := Max(z1.row, z2.row)
-
-        spanCols := (maxCol - minCol) + 1
-        spanRows := (maxRow - minRow) + 1
-
-        finalX := WL + marginOuter + ((minCol - 1) * (colW + marginInner))
-        finalY := WT + marginOuter + ((minRow - 1) * (rowH + marginInner))
-        finalW := (spanCols * colW) + ((spanCols - 1) * marginInner)
-        finalH := (spanRows * rowH) + ((spanRows - 1) * marginInner)
-    }
+    finalX := WL + marginOuter + ((minCol - 1) * (colW + marginInner))
+    finalY := WT + marginOuter + ((minRow - 1) * (rowH + marginInner))
+    finalW := (spanCols * colW) + ((spanCols - 1) * marginInner)
+    finalH := (spanRows * rowH) + ((spanRows - 1) * marginInner)
 
     WinRestore("ahk_id " hwndAlvo)
     WinMove(Round(finalX), Round(finalY), Round(finalW), Round(finalH), "ahk_id " hwndAlvo)
+
+    ; Se a janela foi posicionada no monitor vertical, fixa-a em todas as telas
+    if (isVertical && FileExist(vdExe)) {
+        try Run(vdExe ' /pwh:' hwndAlvo,, "Hide")
+    }
 }
 
-; ================= ABRIR TERMINAL (WIN + ENTER) =================
-#Enter::Run("wt")
+; ================= FUNÇÃO PARA FIXAR TUDO NO MONITOR VERTICAL =================
+FixarJanelasMonitorVertical() {
+    global vdExe
+    if (!FileExist(vdExe))
+        return
 
-; ================= ABRIR TERMINAL (WIN + ALT + ENTER) =================
+    monCount := MonitorGetCount()
+    vertL := 0, vertT := 0, vertR := 0, vertB := 0
+    temVertical := false
+
+    loop monCount {
+        MonitorGetWorkArea(A_Index, &mL, &mT, &mR, &mB)
+        if ((mB - mT) > (mR - mL)) { ; Identifica o monitor vertical
+            vertL := mL, vertT := mT, vertR := mR, vertB := mB
+            temVertical := true
+            break
+        }
+    }
+
+    if (!temVertical)
+        return
+
+    ; Varre as janelas abertas e fixa qualquer uma presente no monitor vertical
+    for hwnd in WinGetList() {
+        if (WinGetMinMax("ahk_id " hwnd) == -1)
+            continue
+
+        title := WinGetTitle("ahk_id " hwnd)
+        if (title == "" || title == "Program Manager" || title == "Settings")
+            continue
+
+        exStyle := WinGetExStyle("ahk_id " hwnd)
+        if (exStyle & 0x00000080)
+            continue
+
+        WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
+        if (w < 150 || h < 150)
+            continue
+
+        cx := x + (w / 2)
+        cy := y + (h / 2)
+
+        ; Se o centro da janela estiver dentro do monitor vertical, fixa-a
+        if (cx >= vertL && cx <= vertR && cy >= vertT && cy <= vertB) {
+            try Run(vdExe ' /pwh:' hwnd,, "Hide")
+        }
+    }
+}
+
+; ================= NAVEGAÇÃO DE DESKTOP (PRESERVA MONITOR VERTICAL) =================
+; Ao navegar com Win + Ctrl + Setas, fixa tudo no vertical antes de trocar a tela
+^#Left:: {
+    FixarJanelasMonitorVertical()
+    Send("^#{Left}")
+}
+
+^#Right:: {
+    FixarJanelasMonitorVertical()
+    Send("^#{Right}")
+}
+
+; ================= ATALHOS GERAIS =================
+; Win + P: Fixa manualmente a janela ativa (útil se você a arrastou com o mouse)
+#p:: {
+    global vdExe
+    if (FileExist(vdExe))
+        Run(vdExe " /paw",, "Hide")
+}
+
+; Win + W: Fecha a janela em foco
+#w:: {
+    hwnd := WinExist("A")
+    if (!hwnd)
+        return
+    class := WinGetClass("ahk_id " hwnd)
+    if (class == "Progman" || class == "WorkerW" || class == "Shell_TrayWnd")
+        return
+    Send("!{F4}")
+}
+
+; Win + Espaço: PowerToys Run
+#Space::Send("#!{Space}")
+
+; Win + Enter / Win + Alt + Enter: Terminal
+#Enter::Run("wt")
 #!Enter::Run("*RunAs wt")
 
-; ================= TROCAR POSIÇÃO DE DUAS JANELAS (WIN + ALT + SETAS LATERAIS) =================
+; Win + Alt + R: Recarregar script
+#!r::Reload()
+
+; ================= TROCA DE POSIÇÃO DE JANELAS (WIN + ALT + SETAS) =================
 #!Left::SwapWindows()
 #!Right::SwapWindows()
 
@@ -185,12 +239,10 @@ SwapWindows() {
     if (!hwndA)
         return
 
-    ; Posição e dimensões da janela ativa
     WinGetPos(&ax, &ay, &aw, &ah, "ahk_id " hwndA)
     acx := ax + (aw / 2)
     acy := ay + (ah / 2)
 
-    ; Identifica o monitor onde a janela ativa está localizada
     monCount := MonitorGetCount()
     currentMon := 1
     loop monCount {
@@ -205,7 +257,6 @@ SwapWindows() {
     hwndB := 0
     bx := 0, by := 0, bw := 0, bh := 0
 
-    ; Procura a outra janela visível e aberta no mesmo monitor
     for hwnd in WinGetList() {
         if (hwnd == hwndA)
             continue
@@ -214,22 +265,20 @@ SwapWindows() {
         if (title == "" || title == "Program Manager" || title == "Settings")
             continue
 
-        if (WinGetMinMax("ahk_id " hwnd) == -1) ; Ignora janelas minimizadas
+        if (WinGetMinMax("ahk_id " hwnd) == -1)
             continue
 
         exStyle := WinGetExStyle("ahk_id " hwnd)
-        if (exStyle & 0x00000080) ; Ignora ToolWindows/overlays
+        if (exStyle & 0x00000080)
             continue
 
         WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
-        if (w < 200 || h < 200) ; Ignora notificações e popups pequenos
+        if (w < 200 || h < 200)
             continue
 
-        ; Centro da janela candidata
         cx := x + (w / 2)
         cy := y + (h / 2)
 
-        ; Valida se está na área útil deste monitor
         if (cx >= WL && cx <= WR && cy >= WT && cy <= WB) {
             hwndB := hwnd
             bx := x, by := y, bw := w, bh := h
@@ -237,7 +286,6 @@ SwapWindows() {
         }
     }
 
-    ; Inverte as coordenadas e dimensões entre as duas janelas
     if (hwndB) {
         WinRestore("ahk_id " hwndA)
         WinRestore("ahk_id " hwndB)
@@ -245,11 +293,9 @@ SwapWindows() {
         WinMove(bx, by, bw, bh, "ahk_id " hwndA)
         WinMove(ax, ay, aw, ah, "ahk_id " hwndB)
 
-        ; Mantém o foco no aplicativo ativo
         WinActivate("ahk_id " hwndA)
     }
 }
 
-
-; No final do arquivo tiling.ahk:
+; Inclui navegação espacial
 #Include "focus.ahk"
