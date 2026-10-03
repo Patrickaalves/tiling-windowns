@@ -122,6 +122,9 @@ GridWindowTiling() {
     WinRestore("ahk_id " hwndAlvo)
     WinMove(Round(finalX), Round(finalY), Round(finalW), Round(finalH), "ahk_id " hwndAlvo)
 
+    ; Sincroniza o grupo: todas as janelas agrupadas recebem as mesmas coordenadas
+    SincronizarGrupo(hwndAlvo, Round(finalX), Round(finalY), Round(finalW), Round(finalH))
+
     ; Se a janela foi posicionada no monitor vertical, fixa-a em todas as telas
     global vdExe
     if (isVertical && FileExist(vdExe)) {

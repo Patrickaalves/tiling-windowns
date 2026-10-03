@@ -1,7 +1,19 @@
 ; ================= REDIMENSIONAR JANELAS ADJACENTES (WIN + / WIN -) =================
 ; Módulo responsável por redimensionar janelas adjacentes lado a lado ou empilhadas
 
-; Passo de 140px por clique (ajuste este valor para saltos maiores ou menores)
+; Sincroniza todas as janelas do grupo da janela informada para as coordenadas dadas
+SincronizarGrupo(hwnd, x, y, w, h) {
+    global gruposJanelas, janelaParaGrupo    if (!janelaParaGrupo.Has(hwnd))
+        return
+    gId := janelaParaGrupo[hwnd]
+    for h in gruposJanelas[gId] {
+        if (h != hwnd && WinExist("ahk_id " h)) {
+            WinRestore("ahk_id " h)
+            WinMove(x, y, w, h, "ahk_id " h)
+        }
+    }
+}
+
 AdjustWindowSplit(delta) {
     ; Remove qualquer atraso artificial do AutoHotkey ao mover janelas (0 ms de delay)
     SetWinDelay(-1)
@@ -32,8 +44,14 @@ AdjustWindowSplit(delta) {
     bx := 0, by := 0, bw := 0, bh := 0
 
     ; Procura a janela vizinha mais próxima no mesmo monitor
+    ; Ignora janelas que estão no mesmo grupo que hwndA (são a mesma "célula")
     for hwnd in WinGetList() {
         if (hwnd == hwndA)
+            continue
+
+        ; Ignora membros do mesmo grupo — eles ocupam o mesmo espaço
+        if (janelaParaGrupo.Has(hwndA) && janelaParaGrupo.Has(hwnd)
+            && janelaParaGrupo[hwndA] == janelaParaGrupo[hwnd])
             continue
 
         title := WinGetTitle("ahk_id " hwnd)
@@ -93,7 +111,10 @@ AdjustWindowSplit(delta) {
                 return
 
             WinMove(ax, ay, newAw, ah, "ahk_id " hwndA)
+            SincronizarGrupo(hwndA, ax, ay, newAw, ah)
+
             WinMove(newBx, by, newBw, bh, "ahk_id " bestHwnd)
+            SincronizarGrupo(bestHwnd, newBx, by, newBw, bh)
         } else {
             ; Vizinha está à ESQUERDA
             newAx := ax - delta
@@ -104,7 +125,10 @@ AdjustWindowSplit(delta) {
                 return
 
             WinMove(newAx, ay, newAw, ah, "ahk_id " hwndA)
+            SincronizarGrupo(hwndA, newAx, ay, newAw, ah)
+
             WinMove(bx, by, newBw, bh, "ahk_id " bestHwnd)
+            SincronizarGrupo(bestHwnd, bx, by, newBw, bh)
         }
     }
     ; --- CASO 2: EMPILHADAS NA VERTICAL (MONITOR VERTICAL) ---
@@ -119,7 +143,10 @@ AdjustWindowSplit(delta) {
                 return
 
             WinMove(ax, ay, aw, newAh, "ahk_id " hwndA)
+            SincronizarGrupo(hwndA, ax, ay, aw, newAh)
+
             WinMove(bx, newBy, bw, newBh, "ahk_id " bestHwnd)
+            SincronizarGrupo(bestHwnd, bx, newBy, bw, newBh)
         } else {
             ; Vizinha está ACIMA
             newAy := ay - delta
@@ -130,7 +157,10 @@ AdjustWindowSplit(delta) {
                 return
 
             WinMove(ax, newAy, aw, newAh, "ahk_id " hwndA)
+            SincronizarGrupo(hwndA, ax, newAy, aw, newAh)
+
             WinMove(bx, by, bw, newBh, "ahk_id " bestHwnd)
+            SincronizarGrupo(bestHwnd, bx, by, bw, newBh)
         }
     }
 }
