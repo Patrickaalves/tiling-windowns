@@ -16,93 +16,66 @@
 global gruposJanelas := Map()      ; Map de grupos: ID_Grupo -> Array de HWNDs
 global janelaParaGrupo := Map()    ; HWND -> ID_Grupo
 global proximoGrupoId := 1
+global hwndPendente := 0           ; Janela aguardando par para agrupar
 
-; Cria ou adiciona a janela ativa a um grupo com a vizinha
-; Modo: Controlado por config.ahk (whitelist/blacklist/permissivo)
+; ---- Fluxo de dois passos ----
+; 1º Win+G: Marca a janela ativa como pendente (aguardando par)
+; 2º Win+G: Forma o grupo entre a janela pendente e a janela atual
 AgruparComVizinha() {
-    global gruposJanelas, janelaParaGrupo, proximoGrupoId, groupingMode, groupingApps
+    global gruposJanelas, janelaParaGrupo, proximoGrupoId, hwndPendente
     SetWinDelay(-1)
 
     hwndA := WinExist("A")
     if (!hwndA)
         return
 
-    ; Obtém o título e classe da janela ativa
-    titleA := WinGetTitle("ahk_id " hwndA)
-    classA := WinGetClass("ahk_id " hwndA)
-
-    ; Verifica se a janela pode ser agrupada baseado na configuração
-    if (!VerificaAgrupavelApp(titleA, classA, groupingMode, groupingApps)) {
+    ; Ainda não há janela pendente — marca esta como pendente e aguarda
+    if (hwndPendente == 0) {
+        hwndPendente := hwndA
+        ; Feedback visual: torna a borda da janela levemente transparente
+        WinSetTransparent(220, "ahk_id " hwndA)
         return
     }
 
-    ; Identifica a janela vizinha mais próxima no mesmo monitor
-    WinGetPos(&ax, &ay, &aw, &ah, "ahk_id " hwndA)
-    acx := ax + (aw / 2), acy := ay + (ah / 2)
-
-    monCount := MonitorGetCount()
-    currentMon := 1
-    loop monCount {
-        MonitorGet(A_Index, &mL, &mT, &mR, &mB)
-        if (acx >= mL && acx <= mR && acy >= mT && acy <= mB) {
-            currentMon := A_Index
-            break
-        }
-    }
-    MonitorGetWorkArea(currentMon, &WL, &WT, &WR, &WB)
-
-    bestHwnd := 0, minDist := 99999999
-    bx := 0, by := 0, bw := 0, bh := 0
-
-    for hwnd in WinGetList() {
-        if (hwnd == hwndA)
-            continue
-        title := WinGetTitle("ahk_id " hwnd)
-        if (title == "" || title == "Program Manager" || title == "Settings")
-            continue
-        if (WinGetMinMax("ahk_id " hwnd) == -1)
-            continue
-        exStyle := WinGetExStyle("ahk_id " hwnd)
-        if (exStyle & 0x00000080)
-            continue
-
-        WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
-        if (w < 150 || h < 150)
-            continue
-
-        cx := x + (w / 2), cy := y + (h / 2)
-        if (cx >= WL && cx <= WR && cy >= WT && cy <= WB) {
-            dist := Sqrt((cx - acx)**2 + (cy - acy)**2)
-            if (dist < minDist) {
-                minDist := dist
-                bestHwnd := hwnd
-                bx := x, by := y, bw := w, bh := h
-            }
-        }
-    }
-
-    if (!bestHwnd)
+    ; Mesma janela pressionou Win+G duas vezes — cancela
+    if (hwndPendente == hwndA) {
+        WinSetTransparent("Off", "ahk_id " hwndA)
+        hwndPendente := 0
         return
+    }
+
+    hwndB := hwndPendente
+    hwndPendente := 0
+
+    ; Restaura transparência
+    WinSetTransparent("Off", "ahk_id " hwndB)
+
+    ; Verifica se as janelas ainda existem
+    if (!WinExist("ahk_id " hwndB))
+        return
+
+    ; Obtém posição da janela B (referência)
+    WinGetPos(&bx, &by, &bw, &bh, "ahk_id " hwndB)
 
     ; Define o ID do grupo
     gId := 0
-    if (janelaParaGrupo.Has(bestHwnd)) {
-        gId := janelaParaGrupo[bestHwnd]
+    if (janelaParaGrupo.Has(hwndB)) {
+        gId := janelaParaGrupo[hwndB]
     } else if (janelaParaGrupo.Has(hwndA)) {
         gId := janelaParaGrupo[hwndA]
     } else {
         gId := proximoGrupoId++
-        gruposJanelas[gId] := [bestHwnd]
-        janelaParaGrupo[bestHwnd] := gId
+        gruposJanelas[gId] := [hwndB]
+        janelaParaGrupo[hwndB] := gId
     }
 
-    ; Adiciona a janela atual ao grupo se ainda não estiver nela
+    ; Adiciona janela A ao grupo se ainda não estiver
     if (!janelaParaGrupo.Has(hwndA)) {
         gruposJanelas[gId].Push(hwndA)
         janelaParaGrupo[hwndA] := gId
     }
 
-    ; Alinha a geometria: molda a janela ativa no retângulo exato da vizinha
+    ; Alinha a janela ativa sobre a janela de referência
     WinRestore("ahk_id " hwndA)
     WinMove(bx, by, bw, bh, "ahk_id " hwndA)
     WinActivate("ahk_id " hwndA)
@@ -121,7 +94,6 @@ CiclarGrupo(direcao) {
     if (tam <= 1)
         return
 
-    ; Localiza índice atual
     idxAtual := 1
     for i, h in grupo {
         if (h == hwndA) {
@@ -137,22 +109,30 @@ CiclarGrupo(direcao) {
         novoIdx := tam
 
     proximaHwnd := grupo[novoIdx]
-    if (WinExist("ahk_id " proximaHwnd)) {
+    if (WinExist("ahk_id " proximaHwnd))
         WinActivate("ahk_id " proximaHwnd)
-    }
 }
 
 ; Remove a janela ativa do grupo
 DesagruparJanela() {
-    global gruposJanelas, janelaParaGrupo
+    global gruposJanelas, janelaParaGrupo, hwndPendente
     hwndA := WinExist("A")
-    if (!hwndA || !janelaParaGrupo.Has(hwndA))
+    if (!hwndA)
+        return
+
+    ; Cancela agrupamento pendente se houver
+    if (hwndPendente != 0) {
+        WinSetTransparent("Off", "ahk_id " hwndPendente)
+        hwndPendente := 0
+        return
+    }
+
+    if (!janelaParaGrupo.Has(hwndA))
         return
 
     gId := janelaParaGrupo[hwndA]
     grupo := gruposJanelas[gId]
 
-    ; Remove do array do grupo
     novoArray := []
     for h in grupo {
         if (h != hwndA)
