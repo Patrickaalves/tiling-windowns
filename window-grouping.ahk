@@ -119,6 +119,11 @@ CriarOverlayGrupo(hwnd, gId) {
     ; Quase transparente — apenas uma dica visual discreta
     WinSetTransparent(130, ov.Hwnd)
 
+    ; Pina o badge em todos os desktops virtuais para não sumir ao trocar área de trabalho
+    global vdExe
+    if (FileExist(vdExe))
+        try Run(vdExe ' /pwh:' ov.Hwnd,, "Hide")
+
     grupoOverlays[hwnd] := { gui: ov, gId: gId, visible: true }
 }
 
@@ -153,7 +158,7 @@ AtualizarOverlays() {
         newX := x + (w // 2) - 16  ; centro horizontal
         newY := y + 2               ; topo da janela
 
-        ; Badge foi destruído pelo sistema — recria
+        ; Badge foi destruído pelo sistema — recria e repina
         if (!WinExist("ahk_id " info.gui.Hwnd)) {
             CriarOverlayGrupo(hwnd, info.gId)
             continue
