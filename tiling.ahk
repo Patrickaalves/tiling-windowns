@@ -169,3 +169,6 @@
     WinRestore("ahk_id " hwndAlvo)
     WinMove(Round(finalX), Round(finalY), Round(finalW), Round(finalH), "ahk_id " hwndAlvo)
 }
+
+; No final do arquivo tiling.ahk:
+#Include "focus.ahk"
