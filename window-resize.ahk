@@ -2,12 +2,20 @@
 ; Módulo responsável por redimensionar janelas adjacentes lado a lado ou empilhadas
 
 ; Sincroniza todas as janelas do grupo da janela informada para as coordenadas dadas
+; Atualiza ultimaPosGrupo para prevenir re-trigger no timer de detecção manual
 SincronizarGrupo(hwnd, x, y, w, h) {
-    global gruposJanelas, janelaParaGrupo
+    global gruposJanelas, janelaParaGrupo, ultimaPosGrupo
     if (!janelaParaGrupo.Has(hwnd))
         return
     gId := janelaParaGrupo[hwnd]
-    for membro in gruposJanelas[gId] {          ; variável renomeada para evitar conflito com 'h' (height)
+
+    ; Registra a nova posição para TODOS os membros antes de mover qualquer um
+    ; — impede que o timer DetectarMovimentoGrupo interprete os WinMove abaixo como movimento manual
+    for membro in gruposJanelas[gId]
+        ultimaPosGrupo[membro] := {x: x, y: y, w: w, h: h}
+
+    ; Move os outros membros
+    for membro in gruposJanelas[gId] {
         if (membro != hwnd && WinExist("ahk_id " membro)) {
             WinRestore("ahk_id " membro)
             WinMove(x, y, w, h, "ahk_id " membro)
