@@ -7,10 +7,10 @@ SincronizarGrupo(hwnd, x, y, w, h) {
     if (!janelaParaGrupo.Has(hwnd))
         return
     gId := janelaParaGrupo[hwnd]
-    for h in gruposJanelas[gId] {
-        if (h != hwnd && WinExist("ahk_id " h)) {
-            WinRestore("ahk_id " h)
-            WinMove(x, y, w, h, "ahk_id " h)
+    for membro in gruposJanelas[gId] {          ; variável renomeada para evitar conflito com 'h' (height)
+        if (membro != hwnd && WinExist("ahk_id " membro)) {
+            WinRestore("ahk_id " membro)
+            WinMove(x, y, w, h, "ahk_id " membro)
         }
     }
 }
@@ -18,6 +18,7 @@ SincronizarGrupo(hwnd, x, y, w, h) {
 AdjustWindowSplit(delta) {
     ; Remove qualquer atraso artificial do AutoHotkey ao mover janelas (0 ms de delay)
     SetWinDelay(-1)
+    global janelaParaGrupo
 
     hwndA := WinExist("A")
     if (!hwndA)
