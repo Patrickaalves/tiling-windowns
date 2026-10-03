@@ -40,9 +40,9 @@ global vdExe := A_ScriptDir "\VirtualDesktop11.exe"
 #!Right::SwapWindows()
 
 ; Win + = / Win + -: Redimensiona janelas adjacentes
-#=::AdjustWindowSplit(140)          ; Win + =
-#+=::AdjustWindowSplit(140)         ; Win + Shift + = (Win + + físico)
-#NumpadAdd::AdjustWindowSplit(140)  ; Win + Numpad +
+#=::AdjustWindowSplit(200)          ; Win + =
+#+=::AdjustWindowSplit(200)         ; Win + Shift + = (Win + + físico)
+#NumpadAdd::AdjustWindowSplit(200)  ; Win + Numpad +
 
-#-::AdjustWindowSplit(-140)         ; Win + -
-#NumpadSub::AdjustWindowSplit(-140) ; Win + Numpad -
+#-::AdjustWindowSplit(-200)         ; Win + -
+#NumpadSub::AdjustWindowSplit(-200) ; Win + Numpad -
