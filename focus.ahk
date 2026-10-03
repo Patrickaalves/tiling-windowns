@@ -1,10 +1,5 @@
-#Requires AutoHotkey v2.0
-
 ; ================= NAVEGAÇÃO DE FOCO ESPACIAL (WIN + SETAS) =================
-#Left::FocusDirection("left")
-#Right::FocusDirection("right")
-#Up::FocusDirection("up")
-#Down::FocusDirection("down")
+; Módulo responsável pela navegação de foco entre janelas usando setas
 
 FocusDirection(dir) {
     activeHwnd := WinExist("A")
@@ -82,3 +77,9 @@ FocusDirection(dir) {
     if (bestHwnd)
         WinActivate("ahk_id " bestHwnd)
 }
+
+; Atalhos para navegação de foco
+#Left::FocusDirection("left")
+#Right::FocusDirection("right")
+#Up::FocusDirection("up")
+#Down::FocusDirection("down")
