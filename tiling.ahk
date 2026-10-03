@@ -1,18 +1,6 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-; Mapeamento fixo 3x2 padrão:
-; Linha 1: Q | W | E
-; Linha 2: A | S | D
-global Zonas := Map(
-    "q", {row: 1, col: 1},
-    "w", {row: 1, col: 2},
-    "e", {row: 1, col: 3},
-    "a", {row: 2, col: 1},
-    "s", {row: 2, col: 2},
-    "d", {row: 2, col: 3}
-)
-
 ; Atalho: Win + T
 #t:: {
     hwndAlvo := WinExist("A")
@@ -38,46 +26,66 @@ global Zonas := Map(
     workW := WR - WL
     workH := WB - WT
 
-    ; Mantém 3 colunas x 2 linhas
-    nCols := 3
-    nRows := 2
+    ; Espaçamentos
+    marginOuter := 16
+    marginInner := 12
 
-    ; Proporção adaptável do HUD de acordo com a orientação do monitor
+    ; Detecta orientação do monitor
     isVertical := (workH > workW)
-    if (isVertical) {
-        hudW := Round(Min(workW * 0.90, 420))
-        hudH := Round(hudW * 0.70)
-    } else {
-        hudW := 600
-        hudH := 340
-    }
-
-    hudPad := 16
-    gap := 10
-
-    hudX := WL + (workW - hudW) / 2
-    hudY := WT + (workH - hudH) / 2
-
-    cardW := (hudW - (2 * hudPad) - ((nCols - 1) * gap)) / nCols
-    cardH := (hudH - (2 * hudPad) - ((nRows - 1) * gap)) / nRows
 
     overlay := Gui("+AlwaysOnTop -Caption +ToolWindow")
     overlay.BackColor := "111827"
-    overlay.SetFont("s20 bold cE5E7EB", "Segoe UI")
-
+    overlay.SetFont("s22 bold cE5E7EB", "Segoe UI")
     caixas := Map()
 
-    for tecla, coord in Zonas {
-        bx := hudPad + ((coord.col - 1) * (cardW + gap))
-        by := hudPad + ((coord.row - 1) * (cardH + gap))
+    ; ================= MONTAGEM DO HUD POR MONITOR =================
+    if (isVertical) {
+        ; Layout Vertical: apenas 2 blocos (Cima e Baixo)
+        hudW := Round(Min(workW * 0.85, 320))
+        hudH := 360
+        hudPad := 16
+        gap := 12
 
-        card := overlay.AddText(
-            "x" Round(bx) " y" Round(by) 
-            " w" Round(cardW) " h" Round(cardH) 
-            " Center 0x200 Background1F2937", 
-            StrUpper(tecla)
+        hudX := WL + (workW - hudW) / 2
+        hudY := WT + (workH - hudH) / 2
+
+        cardW := hudW - (2 * hudPad)
+        cardH := (hudH - (2 * hudPad) - gap) / 2
+
+        ; Desenha Q (Cima) e S (Baixo)
+        caixas["q"] := overlay.AddText("x" hudPad " y" hudPad " w" cardW " h" Round(cardH) " Center 0x200 Background1F2937", "Q")
+        caixas["s"] := overlay.AddText("x" hudPad " y" Round(hudPad + cardH + gap) " w" cardW " h" Round(cardH) " Center 0x200 Background1F2937", "S")
+
+        ; Mapeamento de teclas válidas no monitor vertical (com W e A como sinônimos)
+        zonasPermitidas := Map(
+            "q", {row: 1, uiKey: "q"},
+            "w", {row: 1, uiKey: "q"},
+            "s", {row: 2, uiKey: "s"},
+            "a", {row: 2, uiKey: "s"}
         )
-        caixas[tecla] := card
+    } else {
+        ; Layout Horizontal / Ultrawide: grade 3x2 completa
+        hudW := 600
+        hudH := 340
+        hudPad := 16
+        gap := 10
+
+        hudX := WL + (workW - hudW) / 2
+        hudY := WT + (workH - hudH) / 2
+
+        cardW := (hudW - (2 * hudPad) - (2 * gap)) / 3
+        cardH := (hudH - (2 * hudPad) - (1 * gap)) / 2
+
+        zonasPermitidas := Map(
+            "q", {row: 1, col: 1, uiKey: "q"}, "w", {row: 1, col: 2, uiKey: "w"}, "e", {row: 1, col: 3, uiKey: "e"},
+            "a", {row: 2, col: 1, uiKey: "a"}, "s", {row: 2, col: 2, uiKey: "s"}, "d", {row: 2, col: 3, uiKey: "d"}
+        )
+
+        for tecla, coord in zonasPermitidas {
+            bx := hudPad + ((coord.col - 1) * (cardW + gap))
+            by := hudPad + ((coord.row - 1) * (cardH + gap))
+            caixas[tecla] := overlay.AddText("x" Round(bx) " y" Round(by) " w" Round(cardW) " h" Round(cardH) " Center 0x200 Background1F2937", StrUpper(tecla))
+        }
     }
 
     overlay.Show("x" Round(hudX) " y" Round(hudY) " w" hudW " h" hudH " NoActivate")
@@ -89,56 +97,74 @@ global Zonas := Map(
     ih1.Wait()
     t1 := StrLower(ih1.Input)
 
-    if (!Zonas.Has(t1)) {
+    if (!zonasPermitidas.Has(t1)) {
         overlay.Destroy()
         return
     }
 
-    try caixas[t1].Opt("Background2563EB")
+    ; Destaca a caixa correspondente no HUD
+    try caixas[zonasPermitidas[t1].uiKey].Opt("Background2563EB")
 
-    ; Captura 2ª tecla
+    ; Captura 2ª tecla opcional
     ih2 := InputHook("L1 T0.8")
     ih2.Start()
     ih2.Wait()
     t2 := StrLower(ih2.Input)
 
-    if (!Zonas.Has(t2))
+    if (!zonasPermitidas.Has(t2))
         t2 := t1
 
     overlay.Destroy()
 
-    ; ================= CÁLCULO DAS DIVISÕES =================
-    marginOuter := 16
-    marginInner := 12
+    ; ================= POSICIONAMENTO DA JANELA =================
+    if (isVertical) {
+        ; --- REGRAS DO MONITOR VERTICAL (2 ZONAS) ---
+        halfH := (workH - (2 * marginOuter) - marginInner) / 2
+        fullW := workW - (2 * marginOuter)
 
-    colW := (workW - (2 * marginOuter) - ((nCols - 1) * marginInner)) / nCols
-    rowH := (workH - (2 * marginOuter) - ((nRows - 1) * marginInner)) / nRows
+        r1 := zonasPermitidas[t1].row
+        r2 := zonasPermitidas[t2].row
 
-    par := t1 . t2
-    parInvertido := t2 . t1
-
-    ; Regra especial: QS ou SQ ocupa a tela inteira (todas as 3 colunas e 2 linhas)
-    if (par == "qs" || parInvertido == "qs") {
-        minCol := 1
-        maxCol := 3
-        minRow := 1
-        maxRow := 2
+        ; Se digitou uma de cima e uma de baixo (ex: Q + S), TELA CHEIA
+        if (r1 != r2) {
+            finalX := WL + marginOuter
+            finalY := WT + marginOuter
+            finalW := fullW
+            finalH := workH - (2 * marginOuter)
+        } else if (r1 == 1) {
+            ; Metade de Cima (Q)
+            finalX := WL + marginOuter
+            finalY := WT + marginOuter
+            finalW := fullW
+            finalH := Round(halfH)
+        } else {
+            ; Metade de Baixo (S)
+            finalX := WL + marginOuter
+            finalY := WT + marginOuter + Round(halfH) + marginInner
+            finalW := fullW
+            finalH := Round(halfH)
+        }
     } else {
-        z1 := Zonas[t1]
-        z2 := Zonas[t2]
+        ; --- REGRAS DO MONITOR ULTRAWIDE / HORIZONTAL (3x2) ---
+        colW := (workW - (2 * marginOuter) - (2 * marginInner)) / 3
+        rowH := (workH - (2 * marginOuter) - (1 * marginInner)) / 2
+
+        z1 := zonasPermitidas[t1]
+        z2 := zonasPermitidas[t2]
+
         minCol := Min(z1.col, z2.col)
         maxCol := Max(z1.col, z2.col)
         minRow := Min(z1.row, z2.row)
         maxRow := Max(z1.row, z2.row)
+
+        spanCols := (maxCol - minCol) + 1
+        spanRows := (maxRow - minRow) + 1
+
+        finalX := WL + marginOuter + ((minCol - 1) * (colW + marginInner))
+        finalY := WT + marginOuter + ((minRow - 1) * (rowH + marginInner))
+        finalW := (spanCols * colW) + ((spanCols - 1) * marginInner)
+        finalH := (spanRows * rowH) + ((spanRows - 1) * marginInner)
     }
-
-    spanCols := (maxCol - minCol) + 1
-    spanRows := (maxRow - minRow) + 1
-
-    finalX := WL + marginOuter + ((minCol - 1) * (colW + marginInner))
-    finalY := WT + marginOuter + ((minRow - 1) * (rowH + marginInner))
-    finalW := (spanCols * colW) + ((spanCols - 1) * marginInner)
-    finalH := (spanRows * rowH) + ((spanRows - 1) * marginInner)
 
     WinRestore("ahk_id " hwndAlvo)
     WinMove(Round(finalX), Round(finalY), Round(finalW), Round(finalH), "ahk_id " hwndAlvo)
