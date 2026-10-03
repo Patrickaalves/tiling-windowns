@@ -47,10 +47,3 @@ global vdExe := A_ScriptDir "\VirtualDesktop11.exe"
 
 #-::AdjustWindowSplit(-200)         ; Win + -
 #NumpadSub::AdjustWindowSplit(-200) ; Win + Numpad -
-
-; Win + Alt + G: Remove a janela ativa do grupo
-#!g::DesagruparJanela()
-
-; Win + Shift + Left / Right: Alterna entre janelas do mesmo grupo
-#+Left::CiclarGrupo(-1)  ; Janela anterior do grupo
-#+Right::CiclarGrupo(1)  ; Próxima janela do grupo
