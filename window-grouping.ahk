@@ -3,22 +3,19 @@
 
 #g::AgruparComVizinha()
 #!g::DesagruparJanela()
+
+; Win + Shift + Left / Right: Alterna entre janelas do mesmo grupo
 #+Left::CiclarGrupo(-1)
 #+Right::CiclarGrupo(1)
-
-; ================= ESTADO =================
 
 global gruposJanelas   := Map()  ; gId -> Array de HWNDs
 global janelaParaGrupo := Map()  ; hwnd -> gId
 global proximoGrupoId  := 1
-global hwndPendente    := 0
-global ultimaPosGrupo  := Map()  ; hwnd -> {x,y,w,h} para detectar movimento manual
+global hwndPendente    := 0      ; Janela aguardando 2º Win+G
 
-SetTimer(DetectarMovimentoGrupo, 250)
-
-; ================= AGRUPAMENTO EM DOIS PASSOS =================
+; ---- Fluxo de dois passos ----
 ; 1º Win+G: janela fica levemente transparente (aguardando par)
-; 2º Win+G: forma o grupo
+; 2º Win+G: forma o grupo com a janela atualmente focada
 
 AgruparComVizinha() {
     global gruposJanelas, janelaParaGrupo, proximoGrupoId, hwndPendente
@@ -28,21 +25,18 @@ AgruparComVizinha() {
     if (!hwndA)
         return
 
-    ; Passo 1: marca como pendente
     if (hwndPendente == 0) {
         hwndPendente := hwndA
-        WinSetTransparent(200, "ahk_id " hwndA)
+        WinSetTransparent(220, "ahk_id " hwndA)
         return
     }
 
-    ; Cancela se Win+G na mesma janela
     if (hwndPendente == hwndA) {
         WinSetTransparent("Off", "ahk_id " hwndA)
         hwndPendente := 0
         return
     }
 
-    ; Passo 2: forma o grupo
     hwndB := hwndPendente
     hwndPendente := 0
     WinSetTransparent("Off", "ahk_id " hwndB)
@@ -73,10 +67,8 @@ AgruparComVizinha() {
     WinActivate("ahk_id " hwndA)
 }
 
-; ================= CICLO E DESAGRUPAMENTO =================
-
 CiclarGrupo(direcao) {
-    global gruposJanelas, janelaParaGrupo, ultimaPosGrupo
+    global gruposJanelas, janelaParaGrupo
 
     hwndA := WinExist("A")
     if (!hwndA || !janelaParaGrupo.Has(hwndA))
@@ -97,35 +89,23 @@ CiclarGrupo(direcao) {
     }
 
     novoIdx := idxAtual + direcao
-    if (novoIdx > tam)  novoIdx := 1
-    if (novoIdx < 1)    novoIdx := tam
+    if (novoIdx > tam)
+        novoIdx := 1
+    if (novoIdx < 1)
+        novoIdx := tam
 
     proximaHwnd := grupo[novoIdx]
-    if (!WinExist("ahk_id " proximaHwnd))
-        return
-
-    ; Pausa o timer de detecção para não interferir na troca de foco
-    SetTimer(DetectarMovimentoGrupo, 0)
-
-    WinActivate("ahk_id " proximaHwnd)
-
-    ; Atualiza o cache de posição de todos os membros para evitar
-    ; que o timer interprete a mudança de Z-order como movimento manual
-    WinGetPos(&cx, &cy, &cw, &ch, "ahk_id " proximaHwnd)
-    for membro in grupo
-        ultimaPosGrupo[membro] := {x: cx, y: cy, w: cw, h: ch}
-
-    ; Reativa o timer após a troca de foco estabilizar
-    SetTimer(DetectarMovimentoGrupo, 250)
+    if (WinExist("ahk_id " proximaHwnd))
+        WinActivate("ahk_id " proximaHwnd)
 }
 
 DesagruparJanela() {
     global gruposJanelas, janelaParaGrupo, hwndPendente
+
     hwndA := WinExist("A")
     if (!hwndA)
         return
 
-    ; Cancela agrupamento pendente
     if (hwndPendente != 0) {
         WinSetTransparent("Off", "ahk_id " hwndPendente)
         hwndPendente := 0
@@ -144,53 +124,10 @@ DesagruparJanela() {
             novoArray.Push(h)
     }
 
-    janelaParaGrupo.Delete(hwndA)
-
     if (novoArray.Length > 0)
         gruposJanelas[gId] := novoArray
     else
         gruposJanelas.Delete(gId)
-}
 
-; ================= TIMER: DETECTAR MOVIMENTO MANUAL =================
-
-DetectarMovimentoGrupo() {
-    global gruposJanelas, janelaParaGrupo, ultimaPosGrupo
-
-    for gId, grupo in gruposJanelas {
-        if (grupo.Length <= 1)
-            continue
-
-        for hwnd in grupo {
-            if (!WinExist("ahk_id " hwnd))
-                continue
-            if (WinGetMinMax("ahk_id " hwnd) == -1)
-                continue
-
-            WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
-
-            if (!ultimaPosGrupo.Has(hwnd)) {
-                ultimaPosGrupo[hwnd] := {x: x, y: y, w: w, h: h}
-                continue
-            }
-
-            pos := ultimaPosGrupo[hwnd]
-
-            if (x != pos.x || y != pos.y || w != pos.w || h != pos.h) {
-                ; Atualiza todos antes de mover para evitar ping-pong
-                for membro in grupo
-                    ultimaPosGrupo[membro] := {x: x, y: y, w: w, h: h}
-
-                for membro in grupo {
-                    if (membro != hwnd && WinExist("ahk_id " membro)) {
-                        try {
-                            WinRestore("ahk_id " membro)
-                            WinMove(x, y, w, h, "ahk_id " membro)
-                        }
-                    }
-                }
-                break
-            }
-        }
-    }
+    janelaParaGrupo.Delete(hwndA)
 }
