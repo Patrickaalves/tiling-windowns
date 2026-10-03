@@ -101,16 +101,23 @@ CriarOverlayGrupo(hwnd, gId) {
     ; Remove badge anterior se existir
     RemoverOverlayGrupo(hwnd)
 
-    cor := grupoCores[Mod(gId - 1, grupoCores.Length) + 1]
+    ; Cores suaves por grupo
+    cores := ["1D4ED8", "15803D", "B91C1C", "B45309", "6D28D9", "0E7490"]
+    cor := cores[Mod(gId - 1, cores.Length) + 1]
 
-    WinGetPos(&x, &y,, , "ahk_id " hwnd)
+    WinGetPos(&x, &y, &w, , "ahk_id " hwnd)
 
+    ; Badge pequeno no canto superior direito, quase transparente
     ov := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x20")  ; E0x20 = click-through
     ov.BackColor := cor
-    ov.SetFont("s8 bold cFFFFFF", "Segoe UI")
-    ov.AddText("x0 y0 w28 h28 Center 0x200", "G" gId)
-    ov.Show("x" (x + 8) " y" (y + 38) " w28 h28 NoActivate")
-    WinSetTransparent(230, ov.Hwnd)
+    ov.SetFont("s7 bold cFFFFFF", "Segoe UI")
+    ov.AddText("x0 y0 w32 h14 Center 0x200", "G" gId)
+
+    ; Posiciona no canto superior direito da janela
+    ov.Show("x" (x + w - 40) " y" (y + 32) " w32 h14 NoActivate")
+
+    ; Quase transparente — apenas uma dica visual discreta
+    WinSetTransparent(130, ov.Hwnd)
 
     grupoOverlays[hwnd] := { gui: ov, gId: gId, visible: true }
 }
@@ -142,9 +149,9 @@ AtualizarOverlays() {
             continue
         }
 
-        WinGetPos(&x, &y,, , "ahk_id " hwnd)
-        newX := x + 8
-        newY := y + 38
+        WinGetPos(&x, &y, &w, , "ahk_id " hwnd)
+        newX := x + w - 40   ; canto superior direito
+        newY := y + 32
 
         ; Badge foi destruído pelo sistema — recria
         if (!WinExist("ahk_id " info.gui.Hwnd)) {
