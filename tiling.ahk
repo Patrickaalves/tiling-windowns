@@ -179,4 +179,7 @@
 #Space::Send("!{Space}")
 
 ; ================= ABRIR TERMINAL (WIN + ENTER) =================
-#Enter::Run("*RunAs wt")
+#Enter::Run("wt")
+
+; ================= ABRIR TERMINAL (WIN + ALT + ENTER) =================
+#!Enter::Run("*RunAs wt")
