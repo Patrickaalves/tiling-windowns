@@ -170,9 +170,6 @@
     WinMove(Round(finalX), Round(finalY), Round(finalW), Round(finalH), "ahk_id " hwndAlvo)
 }
 
-; No final do arquivo tiling.ahk:
-#Include "focus.ahk"
-
 ; ================= ABRIR TERMINAL (WIN + ENTER) =================
 #Enter::Run("wt")
 
@@ -252,3 +249,7 @@ SwapWindows() {
         WinActivate("ahk_id " hwndA)
     }
 }
+
+
+; No final do arquivo tiling.ahk:
+#Include "focus.ahk"
