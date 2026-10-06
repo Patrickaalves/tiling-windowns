@@ -65,9 +65,22 @@ NavigateDesktopRight() {
     Send("^#{Right}")
 }
 
-; Fixa manualmente a janela ativa em todos os desktops virtuais
+; Fixa/desfixa (toggle) a janela ativa em todos os desktops virtuais
+; Se a janela já estiver fixada, desfixa; caso contrário, fixa.
 PinCurrentWindow() {
     global vdExe
-    if (FileExist(vdExe))
-        Run(vdExe " /paw",, "Hide")
+    if (!FileExist(vdExe))
+        return
+
+    hwnd := WinExist("A")
+    if (!hwnd)
+        return
+
+    ; /iwhp retorna 0 se a janela está fixada, 1 caso contrário (error level)
+    try {
+        if (RunWait(vdExe " /iwhp:" hwnd " /q",, "Hide") == 0)
+            Run(vdExe " /upwh:" hwnd,, "Hide")   ; já fixada -> desfixa
+        else
+            Run(vdExe " /pwh:" hwnd,, "Hide")    ; não fixada -> fixa
+    }
 }
