@@ -126,8 +126,9 @@ GridWindowTiling() {
     SincronizarGrupo(hwndAlvo, Round(finalX), Round(finalY), Round(finalW), Round(finalH))
 
     ; Se a janela foi posicionada no monitor vertical, fixa-a em todas as telas
-    global vdExe
-    if (isVertical && FileExist(vdExe)) {
+    ; (somente no monitor vertical — monitores horizontais como o ultrawide são ignorados)
+    global vdExe, pinVerticalMonitorWindows
+    if (pinVerticalMonitorWindows && isVertical && FileExist(vdExe)) {
         try Run(vdExe ' /pwh:' hwndAlvo,, "Hide")
     }
 }

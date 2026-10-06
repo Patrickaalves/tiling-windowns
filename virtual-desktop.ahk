@@ -3,7 +3,10 @@
 
 ; Fixa todas as janelas abertas no monitor vertical
 FixarJanelasMonitorVertical() {
-    global vdExe
+    global vdExe, pinVerticalMonitorWindows
+    if (!pinVerticalMonitorWindows)
+        return
+
     if (!FileExist(vdExe))
         return
 

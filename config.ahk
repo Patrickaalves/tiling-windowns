@@ -41,6 +41,15 @@ global marginInner := 12
 ; Passo de redimensionamento ao usar Win + =/-  (pixels)
 global resizeStep := 200
 
+; ================= DESKTOPS VIRTUAIS =================
+
+; Define se as janelas devem ser fixadas (mostradas) em todos os desktops virtuais
+; automaticamente, mas SOMENTE quando estiverem no monitor VERTICAL.
+; Monitores horizontais (ex: ultrawide) NÃO recebem este comportamento.
+; true  = fixa automaticamente as janelas do monitor vertical
+; false = não fixa automaticamente (use Win + P para fixar manualmente)
+global pinVerticalMonitorWindows := true
+
 ; ================= CORES DO HUD =================
 
 ; Cor de fundo do HUD modal
